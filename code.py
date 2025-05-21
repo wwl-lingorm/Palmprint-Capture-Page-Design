@@ -1,3 +1,15 @@
+"""
+.kivy/config.ini中的字体默认配置修改成中文
+default_font = ['Roboto', 'data/fonts/Roboto-Regular.ttf', 'data/fonts/Roboto-Italic.ttf', 'data/fonts/Roboto-Bold.ttf', 'data/fonts/Roboto-BoldItalic.ttf']
+default_font = ['宋体', 'C:\\Windows\\Fonts\\simfang.ttf']
+
+主屏幕（空闲状态）MainScreen
+分屏幕（点击设置后跳转的屏幕）SettingsScreen
+CapturePopup采集弹窗——用户注册
+RecognitionPopup识别弹窗——识别结果显示
+CameraLayout主摄像头画面
+"""
+
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
@@ -5,6 +17,8 @@ from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.uix.popup import Popup
 from kivy.uix.textinput import TextInput
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 from kivy.graphics import Rectangle, Color, Ellipse, Line
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
@@ -17,6 +31,7 @@ import numpy as np
 import re
 import os
 import pyttsx3
+import glob
 
 
 class MainScreen(Screen):
@@ -56,7 +71,7 @@ class SettingsScreen(Screen):
         
         # 标题
         title_label = Label(
-            text="Palm Recognition System",
+            text="掌纹识别系统",
             font_size=28,
             color=(1, 1, 1, 1),
             size_hint=(0.8, 0.4),
@@ -74,8 +89,8 @@ class SettingsScreen(Screen):
         
         # 采集按钮
         self.capture_button = Button(
-            text="Capture", 
-            size_hint=(1, 0.2),
+            text="采 集", 
+            size_hint=(1, 0.3),
             background_color=[0.2, 0.7, 0.2, 0.9],  # 绿色
             font_size=24
         )
@@ -86,18 +101,28 @@ class SettingsScreen(Screen):
 
         # 识别按钮
         self.recognize_button = Button(
-            text="Recognize",
-            size_hint=(1, 0.2),
+            text="识 别",
+            size_hint=(1, 0.3),
             background_color=[0.2, 0.2, 0.7, 0.9],  # 蓝色
             font_size=24
         )
         button_layout.add_widget(self.recognize_button)
         
+        # 新增用户管理按钮
+        self.manage_button = Button(
+            text="用户管理",
+            size_hint=(1, 0.3),
+            background_color=[0.7, 0.2, 0.7, 0.9],  # 紫色
+            font_size=24
+        )
+        button_layout.add_widget(self.manage_button)
+        self.manage_button.bind(on_press=self.show_user_management)
+
         main_layout.add_widget(button_layout)
-        
+
         # 返回按钮 - 现在放在左上角
         back_button = Button(
-            text="<   Back to Camera",
+            text="<   返回",
             size_hint=(0.25, 0.1),
             pos_hint={'x': 0.02, 'top': 0.98},  # 左上角位置
             background_color=[0, 0, 0, 0],  # 白色
@@ -108,6 +133,11 @@ class SettingsScreen(Screen):
         
         self.add_widget(main_layout)
     
+    def show_user_management(self, instance):
+            """显示用户管理弹窗"""
+            popup = UserManagementPopup()
+            popup.open()
+
     def _update_rect(self, instance, value):
         """更新背景矩形"""
         self.rect.pos = instance.pos
@@ -135,22 +165,22 @@ class CapturePopup(Popup):
     """
     def __init__(self, capture_callback, **kwargs):
         super(CapturePopup, self).__init__(**kwargs)
-        self.title = "Register"
+        self.title = "注册"
         self.size_hint = (0.8, 0.4)
         layout = BoxLayout(orientation="vertical", padding=20, spacing=20)
 
         # 姓名输入框
-        self.name_input = TextInput(hint_text="Please Input your Name", multiline=False, size_hint_y=0.3)
+        self.name_input = TextInput(hint_text="姓名：", multiline=False, size_hint_y=0.3)
         layout.add_widget(self.name_input)
 
         # 身份证输入框(带验证)
-        self.id_input = TextInput(hint_text="Please Input your ID", multiline=False, size_hint_y=0.3)
+        self.id_input = TextInput(hint_text="身份证号：", multiline=False, size_hint_y=0.3)
         self.id_input.bind(text=self.validate_id)  # 绑定验证函数
         layout.add_widget(self.id_input)
         
         # 提交按钮(初始不可用)
         self.confirm_button = Button(
-            text = "Submit",
+            text = "确定",
             size_hint = (1, 0.4),
             disabled = True,
             background_color = [0.5, 0.5, 0.5, 1]  # 灰色表示不可用
@@ -229,7 +259,7 @@ class RecognitionPopup(FloatLayout):
         )
         
         # 结果标签
-        result_text = "Recognition Succeed!" if result else "Recognition Failed!"
+        result_text = "识别成功!" if result else "识别失败!"
         content.add_widget(Label(
             text=result_text,
             color=(0, 1, 0, 1) if result else (1, 0, 0, 1),
@@ -286,7 +316,7 @@ class CameraLayout(FloatLayout):
         
         # 采集按钮(初始隐藏)
         self.capture_btn = Button(
-            text="Capture Now",
+            text="采集",
             size_hint=(0.15, 0.08),
             pos_hint={'right': 0.82, 'top': 0.98},
             background_color=[0.8, 0.2, 0.2, 1],
@@ -297,7 +327,7 @@ class CameraLayout(FloatLayout):
 
         # 取消采集按钮(初始隐藏)
         self.cancel_btn = Button(
-            text="Cancel",
+            text="取消",
             size_hint=(0.15, 0.08),
             pos_hint={'right': 0.99, 'top': 0.98},  # 在采集按钮右边
             background_color=[0.8, 0.2, 0.2, 1],
@@ -313,14 +343,14 @@ class CameraLayout(FloatLayout):
             pos_hint={'right': 0.98, 'top': 0.98},
             background_normal='',
             background_color=[0, 0, 0, 0],  # 白色
-            text='setting',
+            text='设置',
             font_size=24
         )
         self.add_widget(self.settings_button)
         
         # 提示标签
         self.hint_label = Label(
-            text="Please place your palm in the circle!",
+            text="请将手掌放置白色圆圈内！",
             size_hint=(0.8, 0.1),
             pos_hint={'center_x': 0.4, 'top': 0.95},
             font_size=24,
@@ -335,7 +365,7 @@ class CameraLayout(FloatLayout):
         
         # 采集状态
         self.is_capturing = False
-        self.hand = "left"  # 初始采集左手
+        self.hand = "左"  # 初始采集左手
         self.capture_count = 0
         self.name = ""
         self.id_number = ""
@@ -372,15 +402,15 @@ class CameraLayout(FloatLayout):
             return
         
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        content.add_widget(Label(text="\nAre you sure you want to cancel capture?" \
-                                    "\n\nAll captured images will be deleted."))
+        content.add_widget(Label(text="\n确定取消采集吗?" \
+                                    "\n\n所有的照片将会被删除。"))
         
         btn_layout = BoxLayout(spacing=10)
-        confirm_btn = Button(text="Yes, Cancel", size_hint=(0.5, 0.5))
+        confirm_btn = Button(text="是", size_hint=(0.5, 0.5))
         confirm_btn.bind(on_press=self._confirm_cancel)
         btn_layout.add_widget(confirm_btn)
         
-        cancel_btn = Button(text="No, Continue", size_hint=(0.5, 0.5))
+        cancel_btn = Button(text="否", size_hint=(0.5, 0.5))
         cancel_btn.bind(on_press=lambda x: self.popup.dismiss())
         btn_layout.add_widget(cancel_btn)
         
@@ -401,11 +431,11 @@ class CameraLayout(FloatLayout):
                     os.remove(os.path.join("local_images", filename))
         
         self.is_capturing = False
-        self.hand = "left"
+        self.hand = "左"
         self.capture_count = 0
         self.progress = 0
         
-        self.hint_label.text = "Capture cancelled"
+        self.hint_label.text = "取消采集成功"
         self.hint_label.opacity = 1
         self.settings_button.opacity = 1
         self.settings_button.disabled = False
@@ -445,15 +475,15 @@ class CameraLayout(FloatLayout):
                 popup = RecognitionPopup(result=True, name=matched_name)
                 self.add_widget(popup)
                 # self.play_audio("Recognition Succeeded!")
-                Clock.schedule_once(lambda dt: self.play_audio("Recognition Succeeded!"), 0.2)
+                Clock.schedule_once(lambda dt: self.play_audio("识别成功!"), 0.2)
             else:
                 popup = RecognitionPopup(result=False)
                 self.add_widget(popup)
                 # self.play_audio("Recognition Failed!")
-                Clock.schedule_once(lambda dt: self.play_audio("Recognition Failed!"), 0.2)
+                Clock.schedule_once(lambda dt: self.play_audio("识别失败!"), 0.2)
             
             # 重置提示标签
-            self.hint_label.text = "Please place your palm in the circle!"
+            self.hint_label.text = "请将手掌放置白色圆圈内！"
             Clock.schedule_once(lambda dt: setattr(self.hint_label, 'opacity', 0), 3)
 
     def show_capture_popup(self):
@@ -476,10 +506,10 @@ class CameraLayout(FloatLayout):
         self.name = name
         self.id_number = id_number
         self.is_capturing = True
-        self.hand = "left"  # 从左手开始
+        self.hand = "左"  # 从左手开始
         self.capture_count = 0
         self.progress = 0
-        self.hint_label.text = f"Collecting the {self.hand} hand (0/10)"
+        self.hint_label.text = f"正在采集{self.hand}手 (0/10)"
         self.hint_label.opacity = 1  # 显示提示
         # 隐藏settings按钮并且使之失效，显示采集按钮
         self.settings_button.opacity = 0
@@ -501,18 +531,18 @@ class CameraLayout(FloatLayout):
             cv2.imwrite(filename, frame)
             self.capture_count += 1
             self.progress += 1
-            self.hint_label.text = f"Collecting the {self.hand} hand ({self.capture_count}/10)"
+            self.hint_label.text = f"正在采集{self.hand}手 ({self.capture_count}/10)"
             # 检查是否完成当前手的采集
             if self.capture_count >= 10:
                 self.progress = 0
-                if self.hand == "left":
+                if self.hand == "左":
                     # 切换到右手
-                    self.hand = "right"
+                    self.hand = "右"
                     self.capture_count = 0
-                    self.hint_label.text = f"Please change to your {self.hand} hand (0/10)"
+                    self.hint_label.text = f"请将{self.hand}手置于圆圈内 (0/10)"
                 else:
                     # 采集完成
-                    self.hint_label.text = "Collection complete!"
+                    self.hint_label.text = "采集完成!"
                     self.is_capturing = False
                     # 恢复按钮状态
                     self.settings_button.opacity = 1
@@ -529,9 +559,9 @@ class CameraLayout(FloatLayout):
     def reset_capture(self, dt):
         """重置采集状态"""
         self.is_capturing = False
-        self.hand = "left"
+        self.hand = "左"
         self.capture_count = 0
-        self.hint_label.text = "Please place your palm in the circle!"
+        self.hint_label.text = "请将手掌放置白色圆圈内！"
         self.hint_label.opacity = 0
         self.settings_button.opacity = 1
         self.settings_button.disabled = False
@@ -581,6 +611,172 @@ class CameraLayout(FloatLayout):
                     self.progress_circle = None
 
 
+    def on_stop(self):
+        """应用关闭时释放摄像头"""
+        # 获取主屏幕并释放摄像头
+        main_screen = self.root.get_screen('main')
+        if hasattr(main_screen.camera_layout, 'capture') and main_screen.camera_layout.capture.isOpened():
+            main_screen.camera_layout.capture.release()
+
+
+class UserManagementPopup(Popup):
+    """
+    用户管理弹窗 - 用于查询和删除用户
+    属性：
+        search_input: 搜索输入框(姓名或ID)
+        search_button: 搜索按钮
+        results_layout: 结果显示区域
+        delete_buttons: 删除按钮列表
+    """
+    def __init__(self, **kwargs):
+        super(UserManagementPopup, self).__init__(**kwargs)
+        self.title = "用户管理"
+        self.size_hint = (0.9, 0.8)
+        
+        # 主布局
+        main_layout = BoxLayout(orientation="vertical", padding=10, spacing=10)
+        
+        # 搜索区域
+        search_layout = BoxLayout(size_hint_y=0.1, spacing=10)
+        self.search_input = TextInput(hint_text="输入姓名或身份证号", multiline=False)
+        search_layout.add_widget(self.search_input)
+        
+        search_button = Button(text="搜索", size_hint_x=0.3)
+        search_button.bind(on_press=self.search_users)
+        search_layout.add_widget(search_button)
+        main_layout.add_widget(search_layout)
+        
+        # 结果区域(带滚动条)
+        scroll_view = ScrollView()
+        self.results_layout = GridLayout(cols=1, spacing=10, size_hint_y=None)
+        self.results_layout.bind(minimum_height=self.results_layout.setter('height'))
+        scroll_view.add_widget(self.results_layout)
+        main_layout.add_widget(scroll_view)
+        
+        # 关闭按钮
+        close_button = Button(text="关闭", size_hint_y=0.1)
+        close_button.bind(on_press=lambda x: self.dismiss())
+        main_layout.add_widget(close_button)
+        
+        self.content = main_layout
+    
+    def search_users(self, instance):
+        """根据输入搜索用户"""
+        query = self.search_input.text.strip()
+        self.results_layout.clear_widgets()
+        
+        if not os.path.exists("local_images"):
+            self._add_result_label("没有找到任何用户数据")
+            return
+        
+        # 获取所有用户文件
+        all_files = glob.glob("local_images/*.png")
+        users = {}
+        
+        # 按用户分组
+        for filepath in all_files:
+            filename = os.path.basename(filepath)
+            parts = filename.split("_")
+            if len(parts) >= 3:  # 确保文件名格式正确
+                name, id_num = parts[0], parts[1]
+                key = f"{name}_{id_num}"
+                if key not in users:
+                    users[key] = {
+                        'name': name,
+                        'id': id_num,
+                        'files': []
+                    }
+                users[key]['files'].append(filename)
+        
+        # 筛选匹配的用户
+        matched_users = []
+        if query:
+            for user_key, user_data in users.items():
+                if query.lower() in user_data['name'].lower() or query in user_data['id']:
+                    matched_users.append(user_data)
+        else:
+            matched_users = list(users.values())
+        
+        # 显示结果
+        if not matched_users:
+            self._add_result_label("没有找到匹配的用户")
+        else:
+            for user in matched_users:
+                self._add_user_result(user)
+    
+    def _add_result_label(self, text):
+        """添加结果标签"""
+        label = Label(text=text, size_hint_y=None, height=40)
+        self.results_layout.add_widget(label)
+    
+    def _add_user_result(self, user):
+        """添加单个用户结果"""
+        user_layout = BoxLayout(size_hint_y=None, height=60, spacing=10)
+        
+        # 用户信息
+        info_label = Label(
+            text=f"姓名: {user['name']}  身份证: {user['id']}  照片数: {len(user['files'])}",
+            size_hint_x=0.7,
+            halign="left",
+            valign="middle"
+        )
+        info_label.bind(size=info_label.setter('text_size'))
+        user_layout.add_widget(info_label)
+        
+        # 删除按钮
+        delete_btn = Button(
+            text="删除",
+            size_hint_x=0.3,
+            background_color=(0.8, 0.2, 0.2, 1)
+        )
+        delete_btn.bind(
+            on_press=lambda x, u=user: self._confirm_delete_user(u)
+        )
+        user_layout.add_widget(delete_btn)
+        
+        self.results_layout.add_widget(user_layout)
+    
+    def _confirm_delete_user(self, user):
+        """显示确认删除弹窗"""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(
+            text=f"确定要删除用户 {user['name']} 吗?\n这将删除所有相关照片。"
+        ))
+        
+        btn_layout = BoxLayout(spacing=10)
+        confirm_btn = Button(text="确认删除")
+        confirm_btn.bind(
+            on_press=lambda x: self._delete_user(user)
+        )
+        btn_layout.add_widget(confirm_btn)
+        
+        cancel_btn = Button(text="取消")
+        cancel_btn.bind(on_press=lambda x: self.popup.dismiss())
+        btn_layout.add_widget(cancel_btn)
+        
+        content.add_widget(btn_layout)
+        
+        self.popup = Popup(
+            title="确认删除",
+            content=content,
+            size_hint=(0.6, 0.4)
+        )
+        self.popup.open()
+    
+    def _delete_user(self, user):
+        """删除用户及其所有照片"""
+        try:
+            for filename in user['files']:
+                filepath = os.path.join("local_images", filename)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            
+            self.popup.dismiss()
+            self.search_users(None)  # 刷新搜索结果
+        except Exception as e:
+            print(f"删除用户时出错: {e}")
+
+
 class MainApp(App):
 
     def build(self):
@@ -598,13 +794,6 @@ class MainApp(App):
         settings_screen.recognize_button.bind(on_press=lambda x: main_screen.camera_layout.handle_recognize())
         sm.add_widget(settings_screen)
         return sm
-
-    def on_stop(self):
-        """应用关闭时释放摄像头"""
-        # 获取主屏幕并释放摄像头
-        main_screen = self.root.get_screen('main')
-        if hasattr(main_screen.camera_layout, 'capture') and main_screen.camera_layout.capture.isOpened():
-            main_screen.camera_layout.capture.release()
 
 
 if __name__ == "__main__":
